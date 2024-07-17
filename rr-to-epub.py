@@ -1,5 +1,4 @@
 import requests, pypub, json, validators
-from math import trunc
 from bs4 import BeautifulSoup
 from pathvalidate import sanitize_filename
 
@@ -67,5 +66,4 @@ if validators.url(url):
 		array_to_epub(title, content_array)
 		print("Success! Enjoy.")
 	except Exception as e:
-		print(str(e))
 		print("Either you provided a bad url or the series has no content to scrape.")
