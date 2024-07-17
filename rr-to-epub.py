@@ -2,19 +2,6 @@ import requests, pypub, json, validators
 from bs4 import BeautifulSoup
 from pathvalidate import sanitize_filename
 
-def array_to_epub(title, content):
-	epub = pypub.epub.Epub(title)
-	print("")
-	for x, chapter in enumerate(content):
-		print(f"Injecting Chapter {x+1} of {len(content)}", end='\r')
-		thisChapter = pypub.create_chapter_from_html(bytes(content[chapter]["content"], 'utf-8'), content[chapter]["title"])
-		epub.add_chapter(thisChapter)
-	print("\nBuilding epub...", end=' ')
-	filename = f'{sanitize_filename(title.lower())}.epub'
-	epub.create(f'./{filename}')
-	print(f'{filename} created.')
-
-
 def get_rr_url_content(url):
 	r = requests.get(url)
 	soup = BeautifulSoup(r.text, "html.parser")
@@ -28,6 +15,7 @@ def royalroad_scrape(target_url):
 	soup = BeautifulSoup(r.text, "html.parser")
 	fic_title = soup.find("div", {"class": "fic-header"}).h1.text
 	print(f"Title found: {fic_title}")
+	epub = pypub.epub.Epub(fic_title)
 	res = soup.find_all('script')
 	scraped = {}
 	for script in res:
@@ -51,19 +39,16 @@ def royalroad_scrape(target_url):
 							chap = int(gTitle[:3].strip())
 						else:
 							chap = round(chap+.01,2)
-						scraped[chapter["id"]] = {
-							"logical": chap, 
-							"title": gTitle,
-							"content": get_rr_url_content(f'{root_url}{chapter["url"]}')
-						}
-	return fic_title, scraped
-
+						content = get_rr_url_content(f'{root_url}{chapter["url"]}')
+						thisChapter = pypub.create_chapter_from_html(bytes(content, 'utf-8'), gTitle)
+						epub.add_chapter(thisChapter)
+	filename = f'{sanitize_filename(fic_title.lower())}.epub'
+	epub.create(f'./{filename}')
 
 url = input("Enter the RoyalRoad series root url: ")
 if validators.url(url):
 	try:
-		title, content_array = royalroad_scrape(url)
-		array_to_epub(title, content_array)
-		print("Success! Enjoy.")
+		royalroad_scrape(url)
+		print("\nSuccess! Enjoy.")
 	except Exception as e:
 		print("Either you provided a bad url or the series has no content to scrape.")
